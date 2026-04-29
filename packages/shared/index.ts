@@ -80,6 +80,12 @@ export {
   globalFormattingSchema,
   sectionFormattingSchema,
   formattingConfigSchema,
+  themeSchema,
 } from './schemas/formatting.schemas';
 
 export { resumeSchema } from './schemas/app.schemas';
+
+export {
+  defaultFormattingConfig,
+  emptyResumeContent,
+} from './defaults/formatting.defaults';

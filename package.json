@@ -2,13 +2,17 @@
   "name": "resume-builder",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"pnpm --filter frontend dev\" \"pnpm --filter backend dev\"",
-    "build": "pnpm --filter frontend build",
+    "dev": "concurrently \"pnpm --filter @resume-builder/frontend dev\" \"pnpm --filter @resume-builder/backend dev\"",
+    "build": "pnpm --filter @resume-builder/frontend build",
     "lint": "eslint . --ext .ts,.tsx",
-    "type-check": "pnpm --filter frontend exec tsc --noEmit"
+    "type-check": "pnpm --filter @resume-builder/frontend exec tsc --noEmit"
   },
   "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
     "concurrently": "^9.1.0",
+    "eslint": "^9.0.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
     "typescript": "^5.7.0"
   }
 }
