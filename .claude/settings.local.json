@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm --version)",
+      "Bash(node -e \"require\\('child_process'\\).execSync\\('pnpm --version', {stdio:'inherit'}\\)\")",
+      "Bash(\"/c/Program Files/nodejs/node_modules/corepack/shims/nodewin/pnpm.cmd\" --version)",
+      "Bash(corepack enable *)",
+      "Bash(npm install *)",
+      "Bash(pnpm install *)",
+      "Bash(pnpm --filter @resume-builder/shared type-check)"
+    ]
+  }
+}

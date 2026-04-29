@@ -1,0 +1,14 @@
+{
+  "name": "resume-builder",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"pnpm --filter frontend dev\" \"pnpm --filter backend dev\"",
+    "build": "pnpm --filter frontend build",
+    "lint": "eslint . --ext .ts,.tsx",
+    "type-check": "pnpm --filter frontend exec tsc --noEmit"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "typescript": "^5.7.0"
+  }
+}
