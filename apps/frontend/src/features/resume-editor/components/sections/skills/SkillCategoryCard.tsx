@@ -26,7 +26,7 @@ export const SkillCategoryCard = observer(({ category }: SkillCategoryCardProps)
       <div className="space-y-2">
         <label className="text-sm font-semibold">Skills</label>
         {category.items.map((item, index) => (
-          <div key={index} className="flex gap-2">
+          <div key={`${category.id}-${item}`} className="flex gap-2">
             <input
               type="text"
               placeholder="Skill"
