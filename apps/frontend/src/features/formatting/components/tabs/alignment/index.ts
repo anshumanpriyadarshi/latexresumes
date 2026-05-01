@@ -1,0 +1,1 @@
+export { AlignmentTab } from './AlignmentTab';

@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { observer } from 'mobx-react-lite';
-import { TopBar } from './components/topbar/TopBar';
-import { SectionTabs } from './components/editor/SectionTabs';
-import { DashboardPanel } from './components/dashboard/DashboardPanel';
-import { FormattingPanel } from './components/formatting/FormattingPanel';
-import { JakesHTMLPreview } from './templates/jakes/JakesHTMLPreview';
-import { useStores, StoreProvider } from './store';
-import { usePersistence } from './hooks/usePersistence';
+import { TopBar } from './features/app-shell';
+import { SectionTabs } from './features/resume-editor';
+import { DashboardPanel } from './features/resume-management';
+import { FormattingPanel } from './features/formatting';
+import { JakesHTMLPreview } from './features/templates';
+import { useStores, StoreProvider } from './features/shared/state';
+import { usePersistence } from './features/shared/hooks/usePersistence';
 
 const MIN_EDITOR_WIDTH = 28;
 const MAX_EDITOR_WIDTH = 56;
