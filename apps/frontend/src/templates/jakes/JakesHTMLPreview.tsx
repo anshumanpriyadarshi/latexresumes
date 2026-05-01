@@ -5,10 +5,10 @@ import type {
   Certification,
   Education,
   Experience,
+  LaTeXUnit,
   Project,
   SectionKey,
   SkillCategory,
-  LaTeXUnit,
 } from '@resume-builder/shared';
 import { useStores } from '../../hooks/useStores';
 
@@ -43,22 +43,30 @@ export const JakesHTMLPreview = observer(() => {
     const sectionFont = font(section, 'sectionTitle');
 
     return (
-      <div
-        style={{
-          ...fontStyle(sectionFont.family, sectionFont.size, sectionFont.weight),
-          color: accentColor,
-          textTransform: 'uppercase',
-          letterSpacing: '0.08em',
-          marginBottom: toLatexUnit(spacing(section, 'afterSectionTitle')),
-        }}
-      >
-        {label}
+      <div style={{ marginBottom: toLatexUnit(spacing(section, 'afterSectionTitle')) }}>
+        <div
+          style={{
+            ...fontStyle(sectionFont.family, sectionFont.size, sectionFont.weight),
+            color: accentColor,
+            textTransform: 'uppercase',
+            letterSpacing: '0.08em',
+          }}
+        >
+          {label}
+        </div>
+        <div
+          style={{
+            borderTop: '0.4pt solid #000000',
+            marginTop: '1pt',
+          }}
+        />
       </div>
     );
   };
 
   const renderBullet = (section: SectionKey, bullet: BulletPoint): JSX.Element => {
     const bodyFont = font(section, 'bodyText');
+
     return (
       <li
         key={bullet.id}
@@ -94,18 +102,29 @@ export const JakesHTMLPreview = observer(() => {
             {entry.startDate} - {entry.endDate}
           </div>
         </div>
-        <div style={{ ...fontStyle(subtitleFont.family, subtitleFont.size, subtitleFont.weight), color: dateTextColor }}>
-          {entry.company}
-          {entry.location ? `, ${entry.location}` : ''}
-        </div>
-        <ul
+        <div
           style={{
-            marginTop: toLatexUnit(spacing('experience', 'afterSectionTitle')),
-            paddingLeft: toLatexUnit(spacing('experience', 'inlineGap')),
+            display: 'flex',
+            justifyContent: 'space-between',
+            gap: toLatexUnit(spacing('experience', 'inlineGap')),
+            ...fontStyle(subtitleFont.family, subtitleFont.size, subtitleFont.weight),
+            color: dateTextColor,
           }}
         >
-          {entry.bullets.map(bullet => renderBullet('experience', bullet))}
-        </ul>
+          <span>{entry.company}</span>
+          <span>{entry.location}</span>
+        </div>
+        {entry.bullets.length > 0 ? (
+          <ul
+            style={{
+              marginTop: toLatexUnit(spacing('experience', 'afterSectionTitle')),
+              paddingLeft: '1.5em',
+              listStylePosition: 'outside',
+            }}
+          >
+            {entry.bullets.map(bullet => renderBullet('experience', bullet))}
+          </ul>
+        ) : null}
       </div>
     );
   };
@@ -126,17 +145,33 @@ export const JakesHTMLPreview = observer(() => {
         >
           <div style={{ ...fontStyle(titleFont.family, titleFont.size, titleFont.weight), color: bodyTextColor }}>
             {entry.degree}
-            {entry.field ? ` in ${entry.field}` : ''}
           </div>
           <div style={{ ...fontStyle(dateFont.family, dateFont.size, dateFont.weight), color: dateTextColor }}>
             {entry.startDate} - {entry.endDate}
           </div>
         </div>
-        <div style={{ ...fontStyle(subtitleFont.family, subtitleFont.size, subtitleFont.weight), color: dateTextColor }}>
-          {entry.institution}
-          {entry.gpa ? ` • GPA: ${entry.gpa}` : ''}
-          {entry.honors ? ` • ${entry.honors}` : ''}
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            gap: toLatexUnit(spacing('education', 'inlineGap')),
+            ...fontStyle(subtitleFont.family, subtitleFont.size, subtitleFont.weight),
+            color: dateTextColor,
+          }}
+        >
+          <span>{entry.institution}</span>
+          <span>{entry.field}</span>
         </div>
+        {entry.gpa ? (
+          <div style={{ ...fontStyle(subtitleFont.family, subtitleFont.size, subtitleFont.weight), color: dateTextColor }}>
+            GPA: {entry.gpa}
+          </div>
+        ) : null}
+        {entry.honors ? (
+          <div style={{ ...fontStyle(subtitleFont.family, subtitleFont.size, subtitleFont.weight), color: dateTextColor }}>
+            {entry.honors}
+          </div>
+        ) : null}
       </div>
     );
   };
@@ -150,7 +185,13 @@ export const JakesHTMLPreview = observer(() => {
         <span style={{ ...fontStyle(subtitleFont.family, subtitleFont.size, 'bold'), color: bodyTextColor }}>
           {category.category}:
         </span>
-        <span style={{ ...fontStyle(bodyFont.family, bodyFont.size, bodyFont.weight), color: bodyTextColor, marginLeft: toLatexUnit(spacing('skills', 'inlineGap')) }}>
+        <span
+          style={{
+            ...fontStyle(bodyFont.family, bodyFont.size, bodyFont.weight),
+            color: bodyTextColor,
+            marginLeft: toLatexUnit(spacing('skills', 'inlineGap')),
+          }}
+        >
           {category.items.join(', ')}
         </span>
       </div>
@@ -179,24 +220,26 @@ export const JakesHTMLPreview = observer(() => {
           </div>
         </div>
         <div style={{ ...fontStyle(subtitleFont.family, subtitleFont.size, subtitleFont.weight), color: dateTextColor }}>
-          {project.techStack.join(' • ')}
+          {project.techStack.join(', ')}
         </div>
-        <div style={{ marginTop: toLatexUnit(spacing('projects', 'afterSectionTitle')) }}>
-          {project.liveUrl && (
-            <span style={{ color: dateTextColor, marginRight: toLatexUnit(spacing('projects', 'inlineGap')) }}>
-              {project.liveUrl}
-            </span>
-          )}
-          {project.repoUrl && <span style={{ color: dateTextColor }}>{project.repoUrl}</span>}
-        </div>
-        <ul
-          style={{
-            marginTop: toLatexUnit(spacing('projects', 'afterSectionTitle')),
-            paddingLeft: toLatexUnit(spacing('projects', 'inlineGap')),
-          }}
-        >
-          {project.bullets.map(bullet => renderBullet('projects', bullet))}
-        </ul>
+        {(project.liveUrl || project.repoUrl) && (
+          <div style={{ marginTop: toLatexUnit(spacing('projects', 'afterSectionTitle')) }}>
+            {project.liveUrl ? <span style={{ color: dateTextColor }}>{project.liveUrl}</span> : null}
+            {project.liveUrl && project.repoUrl ? <span style={{ color: dateTextColor }}> | </span> : null}
+            {project.repoUrl ? <span style={{ color: dateTextColor }}>{project.repoUrl}</span> : null}
+          </div>
+        )}
+        {project.bullets.length > 0 ? (
+          <ul
+            style={{
+              marginTop: toLatexUnit(spacing('projects', 'afterSectionTitle')),
+              paddingLeft: '1.5em',
+              listStylePosition: 'outside',
+            }}
+          >
+            {project.bullets.map(bullet => renderBullet('projects', bullet))}
+          </ul>
+        ) : null}
       </div>
     );
   };
@@ -223,11 +266,23 @@ export const JakesHTMLPreview = observer(() => {
             {cert.expiryDate !== 'never' ? ` - ${cert.expiryDate}` : ''}
           </div>
         </div>
-        <div style={{ ...fontStyle(subtitleFont.family, subtitleFont.size, subtitleFont.weight), color: dateTextColor }}>
-          {cert.issuer}
-          {cert.credentialId ? ` • ${cert.credentialId}` : ''}
-          {cert.url ? ` • ${cert.url}` : ''}
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            gap: toLatexUnit(spacing('certifications', 'inlineGap')),
+            ...fontStyle(subtitleFont.family, subtitleFont.size, subtitleFont.weight),
+            color: dateTextColor,
+          }}
+        >
+          <span>{cert.issuer}</span>
+          <span>{cert.credentialId ?? ''}</span>
         </div>
+        {cert.url ? (
+          <div style={{ ...fontStyle(subtitleFont.family, subtitleFont.size, subtitleFont.weight), color: dateTextColor }}>
+            {cert.url}
+          </div>
+        ) : null}
       </div>
     );
   };
@@ -270,26 +325,15 @@ export const JakesHTMLPreview = observer(() => {
             }}
           >
             <div>{content.personal.location}</div>
-            <div>
-              {content.personal.email}
-              {content.personal.phone ? ` | ${content.personal.phone}` : ''}
-            </div>
-            <div>
-              {content.personal.linkedin}
-              {content.personal.github ? ` | ${content.personal.github}` : ''}
-              {content.personal.website ? ` | ${content.personal.website}` : ''}
-            </div>
+            <div>{content.personal.phone}</div>
+            <div>{content.personal.email}</div>
+            <div>{content.personal.linkedin}</div>
+            <div>{content.personal.github}</div>
+            {content.personal.website ? <div>{content.personal.website}</div> : null}
           </div>
         </header>
 
-        <div
-          className="border-t border-slate-300"
-          style={{
-            borderColor: accentColor,
-            marginTop: toLatexUnit(headerGap),
-            marginBottom: toLatexUnit(headerGap),
-          }}
-        />
+        <div style={{ marginBottom: toLatexUnit(headerGap) }} />
 
         {content.experience.length > 0 && (
           <section style={{ marginBottom: toLatexUnit(spacing('experience', 'beforeSection')) }}>

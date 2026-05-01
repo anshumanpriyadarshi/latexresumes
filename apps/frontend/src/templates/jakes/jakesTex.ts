@@ -1,7 +1,11 @@
-import type { Resume, LaTeXUnit, SectionKey, SpacingConfig, FontConfig } from '@resume-builder/shared';
+import type {
+  LaTeXUnit,
+  Resume,
+  SectionKey,
+  SpacingConfig,
+} from '@resume-builder/shared';
 
 type ResolveSpacing = (section: SectionKey, key: keyof SpacingConfig) => LaTeXUnit;
-type ResolveFont = (section: SectionKey | null, key: keyof FontConfig) => { family: string; size: LaTeXUnit; weight: string };
 
 export const toLatex = (unit: LaTeXUnit): string => `${unit.value}${unit.unit}`;
 
@@ -18,131 +22,220 @@ const latexEscape = (value: string): string =>
     .replace(/~/g, '\\textasciitilde{}')
     .replace(/\^/g, '\\textasciicircum{}');
 
-const fontBlock = (font: { family: string; size: LaTeXUnit; weight: string }, text: string): string =>
-  `\\fontsize{${toLatex(font.size)}}{${toLatex(font.size)}}\\selectfont ${text}`;
+const latexUrl = (value: string): string => `\\url{${value}}`;
 
-const sectionHeader = (resolveFont: ResolveFont, resolveSpacing: ResolveSpacing, section: SectionKey, label: string): string => {
-  const font = resolveFont(section, 'sectionTitle');
+const formatLatexNumber = (value: number): string =>
+  Number.isInteger(value) ? `${value}` : `${Number(value.toFixed(2))}`;
+
+const latexParagraph = (lines: string[]): string =>
+  lines.filter(Boolean).join('\n\n');
+
+const documentPreamble = (resume: Resume): string => {
+  const { formatting } = resume;
+  const margins = formatting.global.pageMargins;
+  const accent = formatting.global.colors.accent.hex;
+
   return [
-    `\\vspace{${toLatex(resolveSpacing(section, 'beforeSection'))}}`,
-    `\\textbf{${fontBlock(font, latexEscape(label))}}`,
-    `\\vspace{${toLatex(resolveSpacing(section, 'afterSectionTitle'))}}`,
+    '\\documentclass[10pt,letterpaper]{article}',
+    '\\usepackage[utf8]{inputenc}',
+    '\\usepackage[T1]{fontenc}',
+    '\\usepackage{geometry}',
+    '\\usepackage{xcolor}',
+    '\\usepackage{hyperref}',
+    '\\usepackage{enumitem}',
+    '\\usepackage{lmodern}',
+    '\\pagestyle{empty}',
+    '\\setlength{\\parindent}{0pt}',
+    '\\setlength{\\parskip}{0pt}',
+    '\\hypersetup{hidelinks}',
+    '\\setlist[itemize]{leftmargin=1.5em, itemsep=0.35em, topsep=0.35em, parsep=0pt, partopsep=0pt}',
+    `\\geometry{top=${toLatex(margins.top)}, bottom=${toLatex(margins.bottom)}, left=${toLatex(margins.left)}, right=${toLatex(margins.right)}}`,
+    `\\definecolor{resumeAccent}{HTML}{${accent}}`,
   ].join('\n');
 };
 
-const entryBullets = (resolveSpacing: ResolveSpacing, section: SectionKey, bullets: Array<{ content: string }>): string =>
-  bullets
-    .map(bullet => `\\resumeItem{${latexEscape(bullet.content)}}`)
-    .join(`\n\\vspace{${toLatex(resolveSpacing(section, 'betweenSubItems'))}}\n`);
+const centerHeader = (resume: Resume): string => {
+  const { personal } = resume.content;
+  const name = resume.formatting.global.fonts.name;
+
+  const contactLines = [
+    personal.location ? latexEscape(personal.location) : '',
+    personal.phone ? latexEscape(personal.phone) : '',
+    personal.email ? `\\href{mailto:${personal.email}}{${latexEscape(personal.email)}}` : '',
+    personal.linkedin ? latexUrl(personal.linkedin) : '',
+    personal.github ? latexUrl(personal.github) : '',
+    personal.website ? latexUrl(personal.website) : '',
+  ].filter(Boolean);
+
+  const body = [
+    `\\textbf{\\fontsize{${toLatex(name.size)}}{${formatLatexNumber(name.size.value * 1.2)}}\\selectfont ${latexEscape(
+      `${personal.firstName} ${personal.lastName}`
+    )}}`,
+    ...contactLines.map(line => `\\small ${line}`),
+  ];
+
+  return [
+    '\\begin{center}',
+    body.join('\n\n'),
+    '\\end{center}',
+  ].join('\n');
+};
+
+const sectionHeading = (title: string): string => [
+  '\\medskip',
+  `\\noindent{\\large\\bfseries\\color{resumeAccent} ${latexEscape(title.toUpperCase())}}`,
+  '\\par',
+  '\\noindent\\rule{\\textwidth}{0.4pt}',
+  '\\par',
+  '\\smallskip',
+].join('\n');
+
+const subsectionTitle = (left: string, right: string): string =>
+  [
+    `\\noindent\\textbf{${latexEscape(left)}}\\hfill ${latexEscape(right)}`,
+    '\\par',
+  ].join('\n');
+
+const subsectionDetail = (left: string, right: string): string =>
+  [
+    `\\noindent\\textit{${latexEscape(left)}}\\hfill ${latexEscape(right)}`,
+    '\\par',
+  ].join('\n');
+
+const itemList = (items: string[]): string => {
+  if (items.length === 0) {
+    return '';
+  }
+
+  return [
+    '\\begin{itemize}',
+    ...items.map(item => `  \\item ${latexEscape(item)}`),
+    '\\end{itemize}',
+  ].join('\n');
+};
+
+const experienceSection = (entries: Resume['content']['experience']): string =>
+  latexParagraph([
+    sectionHeading('Experience'),
+    ...entries.flatMap(entry => {
+      const blocks = [
+        subsectionTitle(entry.role, `${entry.startDate} -- ${entry.endDate}`),
+        subsectionDetail(entry.company, entry.location),
+      ];
+
+      const bullets = itemList(entry.bullets.map(bullet => bullet.content));
+      if (bullets) {
+        blocks.push(bullets);
+      }
+
+      blocks.push('\\medskip');
+      return blocks;
+    }),
+  ]);
+
+const educationSection = (entries: Resume['content']['education']): string =>
+  latexParagraph([
+    sectionHeading('Education'),
+    ...entries.flatMap(entry => {
+      const blocks = [
+        subsectionTitle(entry.degree, `${entry.startDate} -- ${entry.endDate}`),
+        subsectionDetail(entry.institution, entry.field),
+      ];
+
+      if (entry.gpa) {
+        blocks.push(`\\noindent GPA: ${latexEscape(entry.gpa)}\\par`);
+      }
+
+      if (entry.honors) {
+        blocks.push(`\\noindent ${latexEscape(entry.honors)}\\par`);
+      }
+
+      blocks.push('\\medskip');
+      return blocks;
+    }),
+  ]);
+
+const projectsSection = (entries: Resume['content']['projects']): string =>
+  latexParagraph([
+    sectionHeading('Projects'),
+    ...entries.flatMap(entry => {
+      const techStack = entry.techStack.join(', ');
+      const blocks = [
+        subsectionTitle(entry.name, `${entry.startDate} -- ${entry.endDate}`),
+      ];
+
+      if (techStack) {
+        blocks.push(`\\noindent\\textit{${latexEscape(techStack)}}\\par`);
+      }
+
+      const links = [
+        entry.liveUrl ? latexUrl(entry.liveUrl) : '',
+        entry.repoUrl ? latexUrl(entry.repoUrl) : '',
+      ].filter(Boolean);
+
+      if (links.length > 0) {
+        blocks.push(`\\noindent ${links.join(' \\textbar{} ')}\\par`);
+      }
+
+      const bullets = itemList(entry.bullets.map(bullet => bullet.content));
+      if (bullets) {
+        blocks.push(bullets);
+      }
+
+      blocks.push('\\medskip');
+      return blocks;
+    }),
+  ]);
+
+const skillsSection = (entries: Resume['content']['skills']): string =>
+  latexParagraph([
+    sectionHeading('Skills'),
+    ...entries.flatMap(category => [
+      `\\noindent\\textbf{${latexEscape(category.category)}:} ${latexEscape(category.items.join(', '))}\\par`,
+    ]),
+  ]);
+
+const certificationsSection = (entries: Resume['content']['certifications']): string =>
+  latexParagraph([
+    sectionHeading('Certifications'),
+    ...entries.flatMap(entry => {
+      const rightSide =
+        entry.expiryDate !== 'never'
+          ? `${entry.issueDate} -- ${entry.expiryDate}`
+          : entry.issueDate;
+
+      const blocks = [
+        subsectionTitle(entry.name, rightSide),
+        subsectionDetail(entry.issuer, entry.credentialId ?? ''),
+      ];
+
+      if (entry.url) {
+        blocks.push(`\\noindent ${latexUrl(entry.url)}\\par`);
+      }
+
+      blocks.push('\\medskip');
+      return blocks;
+    }),
+  ]);
 
 export function generateJakesTex(
   resume: Resume,
-  resolveSpacing: ResolveSpacing,
-  resolveFont: ResolveFont
+  resolveSpacing: ResolveSpacing
 ): string {
-  const { content, formatting } = resume;
-  const g = formatting.global;
-  const headerGap = toLatex(resolveSpacing('personal', 'afterSectionTitle'));
-  const inlineGap = toLatex(resolveSpacing('personal', 'inlineGap'));
-
-  const lines: string[] = [
-    '\\documentclass[10pt]{article}',
-    '\\usepackage[empty]{fullpage}',
-    '\\usepackage{geometry}',
-    '\\usepackage{xcolor}',
-    '\\geometry{',
-    `  top=${toLatex(g.pageMargins.top)},`,
-    `  bottom=${toLatex(g.pageMargins.bottom)},`,
-    `  left=${toLatex(g.pageMargins.left)},`,
-    `  right=${toLatex(g.pageMargins.right)}`,
-    '}',
+  const document = [
+    documentPreamble(resume),
     '\\begin{document}',
-    '\\begin{center}',
-    fontBlock(resolveFont(null, 'name'), latexEscape(`${content.personal.firstName} ${content.personal.lastName}`)),
-    `\\\\[${inlineGap}]`,
-    fontBlock(resolveFont(null, 'bodyText'), latexEscape(content.personal.location)),
-    `\\\\[${headerGap}]`,
-    fontBlock(resolveFont(null, 'bodyText'), latexEscape(content.personal.email)),
-    '\\end{center}',
+    centerHeader(resume),
+    '\\bigskip',
+    experienceSection(resume.content.experience),
+    educationSection(resume.content.education),
+    projectsSection(resume.content.projects),
+    skillsSection(resume.content.skills),
+    certificationsSection(resume.content.certifications),
+    '\\end{document}',
   ];
 
-  const sections: Array<{ key: SectionKey; label: string; body: string }> = [];
+  void resolveSpacing;
 
-  if (content.experience.length > 0) {
-    const betweenItems = toLatex(resolveSpacing('experience', 'betweenItems'));
-    sections.push({
-      key: 'experience',
-      label: 'Experience',
-      body: content.experience
-        .map(entry => [
-          `\\resumeSubheading{${latexEscape(entry.role)}}{${latexEscape(entry.company)}}{${latexEscape(entry.location)}}{${latexEscape(entry.startDate)} -- ${latexEscape(entry.endDate)}}`,
-          `\\begin{itemize}`,
-          entryBullets(resolveSpacing, 'experience', entry.bullets),
-          `\\end{itemize}`,
-        ].join('\n'))
-        .join(`\n\\vspace{${betweenItems}}\n`),
-    });
-  }
-
-  if (content.education.length > 0) {
-    const betweenItems = toLatex(resolveSpacing('education', 'betweenItems'));
-    sections.push({
-      key: 'education',
-      label: 'Education',
-      body: content.education
-        .map(entry => [
-          `\\resumeSubheading{${latexEscape(entry.degree)}}{${latexEscape(entry.institution)}}{${latexEscape(entry.field)}}{${latexEscape(entry.startDate)} -- ${latexEscape(entry.endDate)}}`,
-          entry.gpa ? `\\textit{GPA: ${latexEscape(entry.gpa)}}` : '',
-          entry.honors ? `\\textit{${latexEscape(entry.honors)}}` : '',
-        ].filter(Boolean).join('\n'))
-        .join(`\n\\vspace{${betweenItems}}\n`),
-    });
-  }
-
-  if (content.projects.length > 0) {
-    const betweenItems = toLatex(resolveSpacing('projects', 'betweenItems'));
-    sections.push({
-      key: 'projects',
-      label: 'Projects',
-      body: content.projects
-        .map(entry => [
-          `\\resumeSubheading{${latexEscape(entry.name)}}{${latexEscape(entry.techStack.join(', '))}}{${entry.liveUrl ? latexEscape(entry.liveUrl) : ''}}{${latexEscape(entry.startDate)} -- ${latexEscape(entry.endDate)}}`,
-          `\\begin{itemize}`,
-          entryBullets(resolveSpacing, 'projects', entry.bullets),
-          `\\end{itemize}`,
-        ].join('\n'))
-        .join(`\n\\vspace{${betweenItems}}\n`),
-    });
-  }
-
-  if (content.skills.length > 0) {
-    sections.push({
-      key: 'skills',
-      label: 'Skills',
-      body: content.skills
-        .map(category => `\\textbf{${latexEscape(category.category)}:} ${latexEscape(category.items.join(', '))}`)
-        .join('\n\n'),
-    });
-  }
-
-  if (content.certifications.length > 0) {
-    sections.push({
-      key: 'certifications',
-      label: 'Certifications',
-      body: content.certifications
-        .map(entry => [
-          `\\textbf{${latexEscape(entry.name)}}`,
-          `${latexEscape(entry.issuer)} | ${latexEscape(entry.issueDate)}${entry.expiryDate !== 'never' ? ` -- ${latexEscape(entry.expiryDate)}` : ''}`,
-        ].join('\n'))
-        .join('\n\n'),
-    });
-  }
-
-  sections.forEach(section => {
-    lines.push(sectionHeader(resolveFont, resolveSpacing, section.key, section.label));
-    lines.push(section.body);
-  });
-
-  lines.push('\\end{document}');
-  return lines.filter(Boolean).join('\n\n');
+  return document.filter(Boolean).join('\n\n');
 }
