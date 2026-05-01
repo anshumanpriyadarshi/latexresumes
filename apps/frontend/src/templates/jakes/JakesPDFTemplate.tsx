@@ -78,11 +78,11 @@ const normalizePdfFontFamily = (family: string): string => {
 
 const pdfFontFamily = (font: FontDef): string => normalizePdfFontFamily(font.family);
 
-const pdfTextStyle = (font: FontDef, color: string) => ({
+const pdfTextStyle = (font: FontDef, textColor: string) => ({
   fontFamily: pdfFontFamily(font),
   fontSize: font.size.value,
   fontWeight: toTextWeight(font.weight),
-  color,
+  color: textColor,
 });
 
 const color = (hex: string): string => `#${hex}`;
@@ -97,19 +97,42 @@ const styles = StyleSheet.create({
   },
 });
 
+const renderSectionHeader = (
+  section: SectionKey,
+  label: string,
+  resolveSpacing: ResolveSpacing,
+  resolveFont: ResolveFont,
+  accentColor: string
+): ReactElement => (
+  <View style={{ marginBottom: toPointValue(resolveSpacing(section, 'afterSectionTitle')) }}>
+    <Text
+      style={{
+        ...pdfTextStyle(resolveFont(section, 'sectionTitle'), accentColor),
+        textTransform: 'uppercase',
+      }}
+    >
+      {label}
+    </Text>
+    <View style={{ borderBottomWidth: 0.4, borderBottomColor: '#000000', marginTop: 1 }} />
+  </View>
+);
+
 const renderBulletList = (
   bullets: BulletPoint[],
   section: SectionKey,
   resolveSpacing: ResolveSpacing,
   resolveFont: ResolveFont,
   bodyColor: string
-): ReactElement => {
+): ReactElement | null => {
+  if (bullets.length === 0) {
+    return null;
+  }
+
   const bulletFont = resolveFont(section, 'bodyText');
   const bulletGap = toPointValue(resolveSpacing(section, 'betweenSubItems'));
-  const inlineGap = toPointValue(resolveSpacing(section, 'inlineGap'));
 
   return (
-    <View style={{ marginTop: toPointValue(resolveSpacing(section, 'afterSectionTitle')), paddingLeft: inlineGap }}>
+    <View style={{ marginTop: toPointValue(resolveSpacing(section, 'afterSectionTitle')), paddingLeft: 18 }}>
       {bullets.map(bullet => (
         <Text
           key={bullet.id}
@@ -118,12 +141,27 @@ const renderBulletList = (
             marginBottom: bulletGap,
           }}
         >
-          • {bullet.content}
+          {`\u2022 ${bullet.content}`}
         </Text>
       ))}
     </View>
   );
 };
+
+const renderTwoColumnLine = (
+  left: string,
+  right: string,
+  leftFont: FontDef,
+  rightFont: FontDef,
+  leftColor: string,
+  rightColor: string,
+  gap: number
+): ReactElement => (
+  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+    <Text style={{ ...pdfTextStyle(leftFont, leftColor), marginRight: gap }}>{left}</Text>
+    <Text style={pdfTextStyle(rightFont, rightColor)}>{right}</Text>
+  </View>
+);
 
 const renderExperience = (
   entry: Experience,
@@ -140,18 +178,8 @@ const renderExperience = (
 
   return (
     <View key={entry.id} style={{ marginBottom: itemGap }}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-        <Text style={{ ...pdfTextStyle(titleFont, bodyColor), marginRight: rowGap }}>{entry.role}</Text>
-        <Text style={{ ...pdfTextStyle(dateFont, dateColor), textAlign: 'right' }}>
-          {entry.startDate} - {entry.endDate}
-        </Text>
-      </View>
-
-      <Text style={pdfTextStyle(subtitleFont, dateColor)}>
-        {entry.company}
-        {entry.location ? `, ${entry.location}` : ''}
-      </Text>
-
+      {renderTwoColumnLine(entry.role, `${entry.startDate} - ${entry.endDate}`, titleFont, dateFont, bodyColor, dateColor, rowGap)}
+      {renderTwoColumnLine(entry.company, entry.location, subtitleFont, subtitleFont, dateColor, dateColor, rowGap)}
       {renderBulletList(entry.bullets, 'experience', resolveSpacing, resolveFont, bodyColor)}
     </View>
   );
@@ -172,20 +200,10 @@ const renderEducation = (
 
   return (
     <View key={entry.id} style={{ marginBottom: itemGap }}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-        <Text style={{ ...pdfTextStyle(titleFont, bodyColor), marginRight: rowGap }}>
-          {entry.degree}
-          {entry.field ? ` in ${entry.field}` : ''}
-        </Text>
-        <Text style={pdfTextStyle(dateFont, dateColor)}>
-          {entry.startDate} - {entry.endDate}
-        </Text>
-      </View>
-      <Text style={pdfTextStyle(subtitleFont, dateColor)}>
-        {entry.institution}
-        {entry.gpa ? ` • GPA: ${entry.gpa}` : ''}
-        {entry.honors ? ` • ${entry.honors}` : ''}
-      </Text>
+      {renderTwoColumnLine(entry.degree, `${entry.startDate} - ${entry.endDate}`, titleFont, dateFont, bodyColor, dateColor, rowGap)}
+      {renderTwoColumnLine(entry.institution, entry.field, subtitleFont, subtitleFont, dateColor, dateColor, rowGap)}
+      {entry.gpa ? <Text style={pdfTextStyle(subtitleFont, dateColor)}>GPA: {entry.gpa}</Text> : null}
+      {entry.honors ? <Text style={pdfTextStyle(subtitleFont, dateColor)}>{entry.honors}</Text> : null}
     </View>
   );
 };
@@ -206,13 +224,7 @@ const renderSkillCategory = (
       <Text style={{ ...pdfTextStyle(subtitleFont, bodyColor), fontWeight: 'bold' }}>
         {category.category}:
       </Text>
-      <Text
-        style={{
-          ...pdfTextStyle(bodyFont, bodyColor),
-          marginLeft: inlineGap,
-          flex: 1,
-        }}
-      >
+      <Text style={{ ...pdfTextStyle(bodyFont, bodyColor), marginLeft: inlineGap, flex: 1 }}>
         {category.items.join(', ')}
       </Text>
     </View>
@@ -235,19 +247,15 @@ const renderProject = (
 
   return (
     <View key={project.id} style={{ marginBottom: itemGap }}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-        <Text style={{ ...pdfTextStyle(titleFont, bodyColor), marginRight: rowGap }}>{project.name}</Text>
-        <Text style={pdfTextStyle(dateFont, dateColor)}>
-          {project.startDate} - {project.endDate}
-        </Text>
-      </View>
-      <Text style={pdfTextStyle(subtitleFont, dateColor)}>{project.techStack.join(' • ')}</Text>
-      <View style={{ flexDirection: 'row', marginTop: afterTitleGap }}>
-        {project.liveUrl && (
-          <Text style={{ color: dateColor, marginRight: rowGap }}>{project.liveUrl}</Text>
-        )}
-        {project.repoUrl && <Text style={{ color: dateColor }}>{project.repoUrl}</Text>}
-      </View>
+      {renderTwoColumnLine(project.name, `${project.startDate} - ${project.endDate}`, titleFont, dateFont, bodyColor, dateColor, rowGap)}
+      <Text style={pdfTextStyle(subtitleFont, dateColor)}>{project.techStack.join(', ')}</Text>
+      {(project.liveUrl || project.repoUrl) && (
+        <View style={{ flexDirection: 'row', marginTop: afterTitleGap }}>
+          {project.liveUrl ? <Text style={{ color: dateColor }}>{project.liveUrl}</Text> : null}
+          {project.liveUrl && project.repoUrl ? <Text style={{ color: dateColor }}> | </Text> : null}
+          {project.repoUrl ? <Text style={{ color: dateColor }}>{project.repoUrl}</Text> : null}
+        </View>
+      )}
       {renderBulletList(project.bullets, 'projects', resolveSpacing, resolveFont, bodyColor)}
     </View>
   );
@@ -265,21 +273,13 @@ const renderCertification = (
   const dateFont = resolveFont('certifications', 'dateLine');
   const rowGap = toPointValue(resolveSpacing('certifications', 'inlineGap'));
   const itemGap = toPointValue(resolveSpacing('certifications', 'betweenItems'));
+  const rightSide = cert.expiryDate !== 'never' ? `${cert.issueDate} - ${cert.expiryDate}` : cert.issueDate;
 
   return (
     <View key={cert.id} style={{ marginBottom: itemGap }}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-        <Text style={{ ...pdfTextStyle(titleFont, bodyColor), marginRight: rowGap }}>{cert.name}</Text>
-        <Text style={pdfTextStyle(dateFont, dateColor)}>
-          {cert.issueDate}
-          {cert.expiryDate !== 'never' ? ` - ${cert.expiryDate}` : ''}
-        </Text>
-      </View>
-      <Text style={pdfTextStyle(subtitleFont, dateColor)}>
-        {cert.issuer}
-        {cert.credentialId ? ` • ${cert.credentialId}` : ''}
-        {cert.url ? ` • ${cert.url}` : ''}
-      </Text>
+      {renderTwoColumnLine(cert.name, rightSide, titleFont, dateFont, bodyColor, dateColor, rowGap)}
+      {renderTwoColumnLine(cert.issuer, cert.credentialId ?? '', subtitleFont, subtitleFont, dateColor, dateColor, rowGap)}
+      {cert.url ? <Text style={pdfTextStyle(subtitleFont, dateColor)}>{cert.url}</Text> : null}
     </View>
   );
 };
@@ -321,37 +321,28 @@ export function JakesPDFTemplate({
               {content.personal.location}
             </Text>
             <Text style={{ ...pdfTextStyle(bodyFont, dateTextColor), marginBottom: inlineGap }}>
+              {content.personal.phone}
+            </Text>
+            <Text style={{ ...pdfTextStyle(bodyFont, dateTextColor), marginBottom: inlineGap }}>
               {content.personal.email}
-              {content.personal.phone ? ` | ${content.personal.phone}` : ''}
             </Text>
-            <Text style={pdfTextStyle(bodyFont, dateTextColor)}>
+            <Text style={{ ...pdfTextStyle(bodyFont, dateTextColor), marginBottom: inlineGap }}>
               {content.personal.linkedin}
-              {content.personal.github ? ` | ${content.personal.github}` : ''}
-              {content.personal.website ? ` | ${content.personal.website}` : ''}
             </Text>
+            <Text style={{ ...pdfTextStyle(bodyFont, dateTextColor), marginBottom: inlineGap }}>
+              {content.personal.github}
+            </Text>
+            {content.personal.website ? (
+              <Text style={pdfTextStyle(bodyFont, dateTextColor)}>{content.personal.website}</Text>
+            ) : null}
           </View>
         </View>
 
-        <View
-          style={{
-            borderBottomWidth: 1,
-            borderBottomColor: accentColor,
-            marginTop: headerGap,
-            marginBottom: headerGap,
-          }}
-        />
+        <View style={{ marginBottom: headerGap }} />
 
         {content.experience.length > 0 && (
           <View style={{ marginBottom: toPointValue(resolveSpacing('experience', 'beforeSection')) }}>
-            <Text
-              style={{
-                ...pdfTextStyle(resolveFont('experience', 'sectionTitle'), accentColor),
-                textTransform: 'uppercase',
-                marginBottom: toPointValue(resolveSpacing('experience', 'afterSectionTitle')),
-              }}
-            >
-              Experience
-            </Text>
+            {renderSectionHeader('experience', 'Experience', resolveSpacing, resolveFont, accentColor)}
             {content.experience.map(entry =>
               renderExperience(entry, resolveSpacing, resolveFont, bodyTextColor, dateTextColor)
             )}
@@ -360,15 +351,7 @@ export function JakesPDFTemplate({
 
         {content.education.length > 0 && (
           <View style={{ marginBottom: toPointValue(resolveSpacing('education', 'beforeSection')) }}>
-            <Text
-              style={{
-                ...pdfTextStyle(resolveFont('education', 'sectionTitle'), accentColor),
-                textTransform: 'uppercase',
-                marginBottom: toPointValue(resolveSpacing('education', 'afterSectionTitle')),
-              }}
-            >
-              Education
-            </Text>
+            {renderSectionHeader('education', 'Education', resolveSpacing, resolveFont, accentColor)}
             {content.education.map(entry =>
               renderEducation(entry, resolveSpacing, resolveFont, bodyTextColor, dateTextColor)
             )}
@@ -377,15 +360,7 @@ export function JakesPDFTemplate({
 
         {content.projects.length > 0 && (
           <View style={{ marginBottom: toPointValue(resolveSpacing('projects', 'beforeSection')) }}>
-            <Text
-              style={{
-                ...pdfTextStyle(resolveFont('projects', 'sectionTitle'), accentColor),
-                textTransform: 'uppercase',
-                marginBottom: toPointValue(resolveSpacing('projects', 'afterSectionTitle')),
-              }}
-            >
-              Projects
-            </Text>
+            {renderSectionHeader('projects', 'Projects', resolveSpacing, resolveFont, accentColor)}
             {content.projects.map(entry =>
               renderProject(entry, resolveSpacing, resolveFont, bodyTextColor, dateTextColor)
             )}
@@ -394,15 +369,7 @@ export function JakesPDFTemplate({
 
         {content.skills.length > 0 && (
           <View style={{ marginBottom: toPointValue(resolveSpacing('skills', 'beforeSection')) }}>
-            <Text
-              style={{
-                ...pdfTextStyle(resolveFont('skills', 'sectionTitle'), accentColor),
-                textTransform: 'uppercase',
-                marginBottom: toPointValue(resolveSpacing('skills', 'afterSectionTitle')),
-              }}
-            >
-              Skills
-            </Text>
+            {renderSectionHeader('skills', 'Skills', resolveSpacing, resolveFont, accentColor)}
             {content.skills.map(category =>
               renderSkillCategory(category, resolveSpacing, resolveFont, bodyTextColor)
             )}
@@ -411,15 +378,7 @@ export function JakesPDFTemplate({
 
         {content.certifications.length > 0 && (
           <View style={{ marginBottom: toPointValue(resolveSpacing('certifications', 'beforeSection')) }}>
-            <Text
-              style={{
-                ...pdfTextStyle(resolveFont('certifications', 'sectionTitle'), accentColor),
-                textTransform: 'uppercase',
-                marginBottom: toPointValue(resolveSpacing('certifications', 'afterSectionTitle')),
-              }}
-            >
-              Certifications
-            </Text>
+            {renderSectionHeader('certifications', 'Certifications', resolveSpacing, resolveFont, accentColor)}
             {content.certifications.map(entry =>
               renderCertification(entry, resolveSpacing, resolveFont, bodyTextColor, dateTextColor)
             )}
