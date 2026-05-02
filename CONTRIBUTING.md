@@ -4,7 +4,7 @@ Thanks for taking the time to help improve `latexresumes`.
 
 ## Project Setup
 
-- Use Node.js `20.x`
+- Use Node.js `24.x`
 - Use `pnpm` `10.33.0`
 - Install dependencies with `pnpm install`
 

@@ -21,10 +21,10 @@ The app provides a browser-based editor for resume content, formatting controls,
 
 ## Requirements
 
-- Node.js 20.x
+- Node.js 24.x
 - `pnpm` 10.33.0
 
-If you use `nvm`, run `nvm use` from the repository root to switch to Node 20.
+If you use `nvm`, run `nvm use` from the repository root to switch to Node 24.
 
 ## Getting Started
 
