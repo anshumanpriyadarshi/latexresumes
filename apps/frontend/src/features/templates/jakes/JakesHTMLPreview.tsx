@@ -44,9 +44,9 @@ export const JakesHTMLPreview = observer(() => {
   const inlineGap = spacing('personal', 'inlineGap');
 
   return (
-    <div className="flex justify-center overflow-auto bg-slate-100 p-6 dark:bg-slate-950">
+    <div className="h-full min-h-0 overflow-auto bg-slate-100 p-4 dark:bg-slate-950 sm:p-6">
       <div
-        className="min-h-[11in] w-[8.5in] bg-white px-8 py-7 text-slate-900 shadow-2xl dark:bg-slate-50"
+        className="mx-auto min-h-[11in] w-[8.5in] max-w-none bg-white px-8 py-7 text-slate-900 shadow-2xl dark:bg-slate-50"
         style={{
           paddingTop: toLatexUnit(pageMargins.top),
           paddingRight: toLatexUnit(pageMargins.right),
