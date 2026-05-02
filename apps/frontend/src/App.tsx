@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { observer } from 'mobx-react-lite';
-import { TopBar } from './features/app-shell';
+import { ResizableDivider, TopBar, useResizablePanel } from './features/app-shell';
 import { SectionTabs } from './features/resume-editor';
 import { DashboardPanel } from './features/resume-management';
 import { FormattingPanel } from './features/formatting';
@@ -8,15 +8,16 @@ import { JakesHTMLPreview } from './features/templates';
 import { useStores, StoreProvider } from './features/shared/state';
 import { usePersistence } from './features/shared/hooks/usePersistence';
 
-const MIN_EDITOR_WIDTH = 28;
-const MAX_EDITOR_WIDTH = 56;
-
-const clamp = (value: number, min: number, max: number): number =>
-  Math.min(max, Math.max(min, value));
+const EDITOR_RESIZE_CONFIG = {
+  defaultValue: 40,
+  min: 28,
+  max: 56,
+  label: 'Resize editor and preview panels',
+};
 
 const AppContent = observer(() => {
   const { appStore } = useStores();
-  const [editorWidth, setEditorWidth] = useState(40);
+  const editorResize = useResizablePanel(EDITOR_RESIZE_CONFIG);
 
   useEffect(() => {
     if (appStore.resumes.length === 0) {
@@ -29,36 +30,6 @@ const AppContent = observer(() => {
   }, [appStore.colorTheme]);
 
   usePersistence(appStore);
-
-  useEffect(() => {
-    const handleMouseMove = (event: MouseEvent): void => {
-      const nextWidth = (event.clientX / window.innerWidth) * 100;
-      setEditorWidth(clamp(nextWidth, MIN_EDITOR_WIDTH, MAX_EDITOR_WIDTH));
-    };
-
-    const handleMouseUp = (): void => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-    };
-
-    const handleMouseDown = (event: MouseEvent): void => {
-      event.preventDefault();
-      document.body.style.cursor = 'col-resize';
-      document.body.style.userSelect = 'none';
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
-    };
-
-    const handle = document.getElementById('editor-resize-handle');
-    handle?.addEventListener('mousedown', handleMouseDown);
-
-    return () => {
-      handle?.removeEventListener('mousedown', handleMouseDown);
-      handleMouseUp();
-    };
-  }, []);
 
   if (!appStore.activeResume) {
     return (
@@ -73,18 +44,22 @@ const AppContent = observer(() => {
       <div className="flex h-screen flex-col bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-50">
         <TopBar />
 
-        <div className="relative flex min-h-0 flex-1 overflow-hidden">
+        <div ref={editorResize.containerRef} className="relative flex min-h-0 flex-1 overflow-hidden">
           <aside
             className="min-w-[18rem] overflow-hidden border-r border-slate-200 bg-white shadow-inner dark:border-slate-700 dark:bg-slate-900"
-            style={{ width: `${editorWidth}%` }}
+            style={{ width: `${editorResize.value}%` }}
           >
             <SectionTabs />
           </aside>
 
-          <div
-            id="editor-resize-handle"
-            className="w-1 cursor-col-resize bg-slate-200 transition hover:bg-indigo-400 dark:bg-slate-700 dark:hover:bg-indigo-500"
-            aria-hidden="true"
+          <ResizableDivider
+            label={EDITOR_RESIZE_CONFIG.label}
+            min={editorResize.min}
+            max={editorResize.max}
+            value={editorResize.value}
+            isResizing={editorResize.isResizing}
+            onPointerDown={editorResize.handlePointerDown}
+            onKeyDown={editorResize.handleKeyDown}
           />
 
           <main className="min-h-0 min-w-0 flex-1 overflow-hidden">
