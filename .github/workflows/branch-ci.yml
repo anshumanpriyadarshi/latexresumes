@@ -1,12 +1,16 @@
-name: Frontend Deploy
+name: Branch CI
 
 on:
   push:
+    branches-ignore:
+      - main
+  pull_request:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
-  build:
+  verify:
     runs-on: ubuntu-latest
 
     steps:
