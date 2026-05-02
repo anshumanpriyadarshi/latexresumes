@@ -73,7 +73,7 @@ const AppContent = observer(() => {
       <div className="flex h-screen flex-col bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-50">
         <TopBar />
 
-        <div className="relative flex flex-1 overflow-hidden">
+        <div className="relative flex min-h-0 flex-1 overflow-hidden">
           <aside
             className="min-w-[18rem] overflow-hidden border-r border-slate-200 bg-white shadow-inner dark:border-slate-700 dark:bg-slate-900"
             style={{ width: `${editorWidth}%` }}
@@ -87,7 +87,7 @@ const AppContent = observer(() => {
             aria-hidden="true"
           />
 
-          <main className="min-w-0 flex-1 overflow-hidden">
+          <main className="min-h-0 min-w-0 flex-1 overflow-hidden">
             <JakesHTMLPreview />
           </main>
 
